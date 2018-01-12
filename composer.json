@@ -21,7 +21,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Fomvasss\\Repository": "src"
+            "Fomvasss\\Repository\\": "src"
         }
     },
     "extra": {
