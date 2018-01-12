@@ -21,7 +21,14 @@
     },
     "autoload": {
         "psr-4": {
-            "Fomvasss\\Repository\\Providers\\RepositoryServiceProvider": "src"
+            "Fomvasss\\Repository": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Fomvasss\\Repository\\Providers\\RepositoryServiceProvider"
+            ]
         }
     }
 }
