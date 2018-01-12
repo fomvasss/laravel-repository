@@ -1,0 +1,27 @@
+{
+    "name": "fomvasss/laravel-repository",
+    "description": "The library for build laravel repository",
+    "type": "library",
+    "keywords": [
+        "laravel",
+        "repository"
+    ],
+    "homepage": "https://github.com/fomvasss/laravel-repository",
+    "authors": [
+        {
+            "name": "Vasyl Fomin",
+            "email": "fomvasss@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "license": "MIT",
+    "require": {
+        "php" : ">=7.0.0",
+        "illuminate/support": "5.2.*|5.3.*|5.4.*|5.5.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fomvasss\\Repository\\Providers\\RepositoryServiceProvider": "src"
+        }
+    }
+}
