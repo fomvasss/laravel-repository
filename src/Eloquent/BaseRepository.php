@@ -7,6 +7,7 @@ use Fomvasss\Repository\Events\RepositoryEntityCreated;
 use Fomvasss\Repository\Events\RepositoryEntityDeleted;
 use Fomvasss\Repository\Events\RepositoryEntityUpdated;
 use Fomvasss\Repository\Exceptions\RepositoryException;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -73,7 +74,7 @@ abstract class BaseRepository implements RepositoryInterface
     protected $scopes = [];
 
     /**
-     * String or array - extra params for repository: filters, order,...
+     * String or array - extra params for the repository: filters, order,...
      *
      * @var string|array
      */
@@ -94,9 +95,6 @@ abstract class BaseRepository implements RepositoryInterface
      */
     protected $maxPerPage = 150;
 
-    /**
-     * BaseRepository constructor.
-     */
     public function __construct()
     {
         $this->makeModel();
@@ -108,10 +106,6 @@ abstract class BaseRepository implements RepositoryInterface
         //
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Model|mixed
-     * @throws \Fomvasss\Repository\Exceptions\RepositoryException
-     */
     public function makeModel()
     {
         $model = app()->make($this->model());
@@ -135,13 +129,22 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Get all the model records in the database.
-     *
-     * @param array $columns
-     *
-     * @return Collection|static[]
-     */
+    protected function applyExtras()
+    {
+        return $this->newQuery()->eagerLoad()->setClauses()->setScopes();
+    }
+
+    protected function unsetClauses()
+    {
+        $this->wheres = [];
+        $this->whereIns = [];
+        $this->scopes = [];
+        $this->take = null;
+        $this->extraQueryParams = null;
+
+        return $this;
+    }
+
     public function all(array $columns = ['*'])
     {
         $this->newQuery()->eagerLoad();
@@ -153,37 +156,11 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    /**
-     * Get all the specified model records in the database.
-     *
-     * @param array $columns
-     *
-     * @return Collection|static[]
-     */
-    public function get(array $columns = ['*'])
-    {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
-
-        $models = $this->query->get($columns);
-
-        $this->unsetClauses();
-
-        return $models;
-    }
-
-    /**
-     * @param int $perPage
-     * @param array $columns
-     * @param string $pageName
-     * @param null $page
-     *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
     public function paginate($perPage = 15, array $columns = ['*'], $pageName = 'page', $page = null)
     {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
+        $this->applyExtras();
 
-        $this->checkPerPage($perPage);
+        $this->preparePerPage($perPage);
 
         $models = $this->query->paginate($this->perPage, $columns, $pageName, $page);
 
@@ -192,17 +169,11 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    /**
-     * @param int $perPage
-     * @param array $columns
-     *
-     * @return mixed
-     */
     public function simplePaginate($perPage = 15, array $columns = ['*'])
     {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
+        $this->applyExtras();
 
-        $this->checkPerPage($perPage);
+        $this->preparePerPage($perPage);
 
         $models = $this->query->simplePaginate($this->perPage, $columns);
 
@@ -213,7 +184,7 @@ abstract class BaseRepository implements RepositoryInterface
 
     public function pluck($column, $key = null)
     {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
+        $this->applyExtras();
 
         $models = $this->query->pluck($column, $key);
 
@@ -222,25 +193,50 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    /**
-     * Count the number of specified model records in the database.
-     *
-     * @return int
-     */
     public function count() : int
     {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
+        $this->applyExtras();
 
-        return $this->get()->count();
+        $count = $this->get()->count();
+
+        $this->unsetClauses();
+
+        return $count;
     }
 
-    /**
-     * Create a new model record in the database.
-     *
-     * @param array $data
-     *
-     * @return \Illuminate\Database\Eloquent\Model
-     */
+    public function find($id, array $columns = ['*'], string $column = 'id')
+    {
+        $this->applyExtras();
+
+        $model = $this->query->where($column, $id)->first($columns);
+
+        $this->unsetClauses();
+
+        return $model;
+    }
+
+    public function findOrFail($id, array $columns = ['*'], string $column = 'id')
+    {
+        $this->applyExtras();
+
+        $model = $this->query->where($column, $id)->firstOrFail($columns);
+
+        $this->unsetClauses();
+
+        return $model;
+    }
+
+    public function first(array $columns = ['*'])
+    {
+        $this->applyExtras();
+
+        $model = $this->query->first($columns);
+
+        $this->unsetClauses();
+
+        return $model;
+    }
+
     public function create(array $data)
     {
         $this->unsetClauses();
@@ -252,13 +248,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $model;
     }
 
-    /**
-     * Create one or more new model records in the database.
-     *
-     * @param array $data
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function createMultiple(array $data)
     {
         $models = new Collection();
@@ -270,71 +259,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    /**
-     * Get the first specified model record from the database.
-     *
-     * @param $id
-     * @param array $columns
-     * @param string $column
-     *
-     * @return \Illuminate\Database\Eloquent\Model|null|static
-     */
-    public function find($id, array $columns = ['*'], string $column = 'id')
-    {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
-
-        $model = $this->query->where($column, $id)->first($columns);
-
-        $this->unsetClauses();
-
-        return $model;
-    }
-
-    /**
-     * Get the first specified model record from the database.
-     *
-     * @param $id
-     * @param array $columns
-     * @param string $column
-     *
-     * @return \Illuminate\Database\Eloquent\Model|null|static
-     */
-    public function findOrFail($id, array $columns = ['*'], string $column = 'id')
-    {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
-
-        $model = $this->query->where($column, $id)->firstOrFail($columns);
-
-        $this->unsetClauses();
-
-        return $model;
-    }
-
-    /**
-     * @param array $columns
-     *
-     * @return \Illuminate\Database\Eloquent\Model|null|static
-     */
-    public function first(array $columns = ['*'])
-    {
-        $this->newQuery()->eagerLoad()->setClauses()->setScopes();
-
-        $model = $this->query->first($columns);
-
-        $this->unsetClauses();
-
-        return $model;
-    }
-
-    /**
-     * Update the specified model record in the database.
-     *
-     * @param $id
-     * @param array $data
-     * @param string $column
-     *
-     * @return mixed
-     */
     public function update($id, array $data, string $column = 'id')
     {
         $this->unsetClauses();
@@ -343,26 +267,18 @@ abstract class BaseRepository implements RepositoryInterface
             event(new RepositoryEntityUpdated($this, $model));
         }
 
-        return $this->find($id, ['*'], $column);
+        return $model;
     }
 
-    /**
-     * Update the specified model record in the database.
-     *
-     * @param $id
-     * @param array $data
-     * @param string $column
-     *
-     * @return mixed
-     */
     public function updateOrFail($id, array $data, string $column = 'id')
     {
         $this->unsetClauses();
+
         if (($model = $this->findOrFail($id, ['*'], $column))->update($data)) {
             event(new RepositoryEntityUpdated($this, $model));
         }
 
-        return $this->find($id, ['*'], $column);
+        return $model;
     }
 
     public function updateOrCreate(array $attributes, array $values = [])
@@ -375,14 +291,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $model;
     }
 
-    /**
-     * Delete one or more model records from the database.
-     *
-     * @param $id
-     * @param string $column
-     *
-     * @return bool
-     */
     public function delete($id, string $column = 'id') : bool
     {
         $this->unsetClauses();
@@ -394,14 +302,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $result;
     }
 
-    /**
-     * Delete one or more model records from the database.
-     *
-     * @param $id
-     * @param string $column
-     *
-     * @return bool
-     */
     public function deleteOrFail($id, string $column = 'id') : bool
     {
         $this->unsetClauses();
@@ -413,26 +313,12 @@ abstract class BaseRepository implements RepositoryInterface
         return $result;
     }
 
-    /**
-     * Delete multiple records.
-     *
-     * @param array $ids
-     *
-     * @return int
-     */
-    public function deleteMultipleById(array $ids) : int
+    public function deleteMultipleById(array $ids)
     {
         // not event fire!
         return $this->model->destroy($ids);
     }
 
-    /**
-     * Set the query limit.
-     *
-     * @param int $limit
-     *
-     * @return $this
-     */
     public function limit(int $limit)
     {
         $this->take = $limit;
@@ -440,10 +326,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * @param null $extraQueryParams
-     * @return $this
-     */
     public function extraQueryParams($extraQueryParams = null)
     {
         $this->extraQueryParams = $extraQueryParams;
@@ -451,23 +333,14 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * @param int $maxPerPage
-     * @return $this
-     */
     public function maxPerPage(int $maxPerPage)
     {
         $this->maxPerPage = $maxPerPage;
 
         return $this;
     }
-
-
-    /**
-     * @param int $perPage
-     * @return $this
-     */
-    protected function checkPerPage($perPage = 15)
+    
+    protected function preparePerPage($perPage = 15)
     {
         $perPage = (int) $perPage;
         $this->perPage = ($perPage > $this->maxPerPage || $perPage < $this->minPerPage) ? $this->perPage : $perPage;
@@ -475,13 +348,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Set an ORDER BY clause.
-     *
-     * @param string $column
-     * @param string $direction
-     * @return $this
-     */
     public function orderBy($column, $direction = 'asc')
     {
         $this->orderBys[] = compact('column', 'direction');
@@ -489,14 +355,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Add a simple where clause to the query.
-     *
-     * @param $column
-     * @param $value
-     * @param string $operator
-     * @return $this
-     */
     public function where($column, $value, $operator = '=')
     {
         $this->wheres[] = compact('column', 'value', 'operator');
@@ -504,14 +362,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Add a simple where in clause to the query.
-     *
-     * @param string $column
-     * @param mixed  $values
-     *
-     * @return $this
-     */
     public function whereIn($column, $values)
     {
         $values = is_array($values) ? $values : [$values];
@@ -521,13 +371,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Set Eloquent relationships to eager load.
-     *
-     * @param $relations
-     *
-     * @return $this
-     */
     public function with($relations)
     {
         if (is_string($relations)) {
@@ -539,11 +382,24 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Add relationships to the query builder to eager load.
-     *
-     * @return $this
-     */
+    public function scope(string $method, ...$args)
+    {
+        $this->scopes[] = [$method, $args];
+
+        return $this;
+    }
+
+    public function get(array $columns = ['*'])
+    {
+        $this->applyExtras();
+
+        $models = $this->query->get($columns);
+
+        $this->unsetClauses();
+
+        return $models;
+    }
+
     protected function eagerLoad()
     {
         foreach ($this->with as $relation) {
@@ -553,11 +409,6 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * Set clauses on the query builder.
-     *
-     * @return $this
-     */
     protected function setClauses()
     {
         foreach ($this->wheres as $where) {
@@ -579,44 +430,12 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
 
-    /**
-     * @param string $method
-     * @param array ...$args
-     * @return $this
-     */
-    public function scope(string $method, ...$args)
-    {
-        $this->scopes = array_merge($this->scopes, [$method => $args]);
-
-        return $this;
-    }
-
-    /**
-     * Set query scopes.
-     *
-     * @return $this
-     */
     protected function setScopes()
     {
-        foreach ($this->scopes as $method => $args) {
-            //$this->query->$method(implode(', ', $args));
-            $this->query->$method($args);
+        foreach ($this->scopes as $scope) {
+            list($method, $args) = $scope;
+            $this->query->$method(...$args);
         }
-
-        return $this;
-    }
-
-    /**
-     * Reset the query clause parameter arrays.
-     *
-     * @return $this
-     */
-    protected function unsetClauses()
-    {
-        $this->wheres = [];
-        $this->whereIns = [];
-        $this->scopes = [];
-        $this->take = null;
 
         return $this;
     }

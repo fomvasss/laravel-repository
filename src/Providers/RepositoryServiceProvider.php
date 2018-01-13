@@ -15,8 +15,7 @@ class RepositoryServiceProvider extends ServiceProvider
     {
         $this->publishes([
             __DIR__ . '/../../config/repository.php' => config_path('repository.php')
-        ]);
-        $this->mergeConfigFrom(__DIR__ . '/../../config/repository.php', 'repository');
+        ], 'repository-config');
     }
 
     /**
@@ -26,6 +25,8 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->mergeConfigFrom(__DIR__ . '/../../config/repository.php', 'repository');
+
         //$this->commands('Fomvasss\Repository\Generators\Commands\RepositoryCommand');
     }
 }

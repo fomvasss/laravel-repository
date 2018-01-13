@@ -4,6 +4,7 @@
     "type": "library",
     "keywords": [
         "laravel",
+        "cache",
         "repository"
     ],
     "homepage": "https://github.com/fomvasss/laravel-repository",
