@@ -19,8 +19,8 @@ php artisan vendor:publish --provider="Fomvasss\Repository\Providers\RepositoryS
 
 ## All base methods repository
 
-Interface all methods see in [RepositoryInterface](src/Contracts/RepositoryInterface.php)
-Realisation interface see in [BaseRepository](src/Eloquent/BaseRepository.php)
+- Interface all methods see in [RepositoryInterface](src/Contracts/RepositoryInterface.php)
+- Realisation interface see in [BaseRepository](src/Eloquent/BaseRepository.php)
 
 ## Usage
 
@@ -62,7 +62,13 @@ class ArticleController extends BaseController {
     }
     
     public function index() {
-        $articles = $this->repository->all();
+		$articles = $this->repository
+			->scope('byStatus', 1)
+			->with('user')
+			->where('created_at', \Carbon\Carbon::yesterday(), '>')
+			->orderBy('created_at')
+			->get();
+
         //....
     }
     //....
@@ -78,8 +84,7 @@ Repository entity have next events:
 
 ## Usage repository cache
 
-All cache methods:
-Interface see in [CacheableInterface](src/Contracts/CacheableInterface.php)
+All cache methods see in Interface [CacheableInterface](src/Contracts/CacheableInterface.php)
 
 Example repository with cache:
 

@@ -1,6 +1,6 @@
 # Changelog laravel-repository
 
-## 1.0.0 - 2018-01-13
+## 1.1.0 - 2018-01-13
 
 - Add cache, config
 - Update scope

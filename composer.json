@@ -5,7 +5,9 @@
     "keywords": [
         "laravel",
         "cache",
-        "repository"
+        "repository",
+        "pattern-repository",
+        "eloquent"
     ],
     "homepage": "https://github.com/fomvasss/laravel-repository",
     "authors": [
