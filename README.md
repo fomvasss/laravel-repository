@@ -82,6 +82,26 @@ Repository entity have next events:
 - `RepositoryEntityUpdated`
 - `RepositoryEntityDeleted`
 
+For example, you can add in your EventServiceProvider next:
+```php
+protected $listen = [
+	\Fomvasss\Repository\Events\RepositoryEntityCreated::class => [
+		\App\Listeners\CreatedNewModelInRepoListener::class
+	]
+];
+```
+And use next method in method handle (in your listener `CreatedNewModeInRepoListener`):
+
+```php
+public function handle(RepositoryEntityCreated $event)
+{
+	dd($event->getAction());
+	dd($event->getModel());
+	dd($event->getRepository());
+}
+```
+
+
 ## Usage repository cache
 
 All cache methods see in Interface [CacheableInterface](src/Contracts/CacheableInterface.php)
