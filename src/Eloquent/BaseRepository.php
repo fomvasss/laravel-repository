@@ -156,7 +156,7 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    public function paginate($perPage = 15, array $columns = ['*'], $pageName = 'page', $page = null)
+    public function paginate($perPage = null, array $columns = ['*'], $pageName = 'page', $page = null)
     {
         $this->applyExtras();
 
@@ -169,7 +169,7 @@ abstract class BaseRepository implements RepositoryInterface
         return $models;
     }
 
-    public function simplePaginate($perPage = 15, array $columns = ['*'])
+    public function simplePaginate($perPage = null, array $columns = ['*'])
     {
         $this->applyExtras();
 
@@ -231,6 +231,17 @@ abstract class BaseRepository implements RepositoryInterface
         $this->applyExtras();
 
         $model = $this->query->first($columns);
+
+        $this->unsetClauses();
+
+        return $model;
+    }
+
+    public function firstOrFail(array $columns = ['*'])
+    {
+        $this->applyExtras();
+
+        $model = $this->query->firstOrFail($columns);
 
         $this->unsetClauses();
 
@@ -340,9 +351,9 @@ abstract class BaseRepository implements RepositoryInterface
         return $this;
     }
     
-    protected function preparePerPage($perPage = 15)
+    protected function preparePerPage($perPage = null)
     {
-        $perPage = (int) $perPage;
+        $perPage = $perPage ?: request('per_page', 15);
         $this->perPage = ($perPage > $this->maxPerPage || $perPage < $this->minPerPage) ? $this->perPage : $perPage;
 
         return $this;
@@ -385,6 +396,21 @@ abstract class BaseRepository implements RepositoryInterface
     public function scope(string $method, ...$args)
     {
         $this->scopes[] = [$method, $args];
+
+        return $this;
+    }
+
+    public function scopes(...$attributes)
+    {
+        foreach ($attributes as $key => $attribute) {
+            if (is_array($attribute) && ! empty($attribute) && is_string($attribute[0])) {
+                $method = $attribute[0];
+                unset($attribute[0]);
+                $this->scopes[] = [$method, $attribute];
+            } elseif (is_string($attribute)) {
+                $this->scopes[] = [$attribute, []];
+            }
+        }
 
         return $this;
     }

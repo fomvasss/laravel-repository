@@ -66,4 +66,6 @@ interface CacheableInterface
     public function findOrFail($id, array $columns = ['*'], string $column = 'id');
 
     public function first(array $columns = ['*']);
+
+    public function firstOrFail(array $columns = ['*']);
 }

@@ -25,7 +25,6 @@ php artisan vendor:publish --provider="Fomvasss\Repository\Providers\RepositoryS
 ## Usage
 
 ### Make own repository
-
 Extend your repository class the next `BaseRepository` class
 ```php
 <?php
@@ -63,7 +62,7 @@ class ArticleController extends BaseController {
     
     public function index() {
 		$articles = $this->repository
-			->scope('byStatus', 1)
+			->scopes(['byStatus', 1], ['sortable', ['id'=>'desc']], 'searchable')
 			->with('user')
 			->where('created_at', \Carbon\Carbon::yesterday(), '>')
 			->orderBy('created_at')
@@ -71,8 +70,37 @@ class ArticleController extends BaseController {
 
         //....
     }
+    
+        public function show() {
+    		$article = $this->repository
+    			->scope('byStatus', 1)
+    			->with(['user', 'categories'])
+    			->where('created_at', \Carbon\Carbon::today(), '<')
+    			->orderBy('created_at')
+    			->firstOrFail();
+    
+            //....
+        }
     //....
 }
+```
+
+### Make custom method in own repository
+
+__! Custom method do not use repository cache!__
+```php
+    public function myCustomMethodByType($attributes)
+    {
+        $this->applyExtras();
+        $models = $this->query;
+
+        if (!empty($attributes['type'])) {
+            $models = $this->query->where('type', $attributes['type']);
+        }
+
+        $this->unsetClauses();
+        return $models;
+    }
 ```
 
 ## Events repository

@@ -22,14 +22,14 @@ interface RepositoryInterface
      * @param null $page
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function paginate($limit = 15, array $columns = ['*'], $pageName = 'page', $page = null);
+    public function paginate($limit = null, array $columns = ['*'], $pageName = 'page', $page = null);
 
     /**
      * @param int $perPage
      * @param array $columns
      * @return \Illuminate\Contracts\Pagination\Paginator
      */
-    public function simplePaginate($perPage = 15, array $columns = ['*']);
+    public function simplePaginate($perPage = null, array $columns = ['*']);
 
     /**
      * @param $column
@@ -64,6 +64,12 @@ interface RepositoryInterface
      * @return \Illuminate\Database\Eloquent\Model|null
      */
     public function first(array $columns = ['*']);
+
+    /**
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Model|null
+     */
+    public function firstOrFail(array $columns = ['*']);
 
     /**
      * @param array $data
@@ -172,6 +178,12 @@ interface RepositoryInterface
      * @return $this
      */
     public function scope(string $method, ...$args);
+
+    /**
+     * @param mixed ...$attributes
+     * @return $this
+     */
+    public function scopes(...$attributes);
 
     /**
      * @param array $columns

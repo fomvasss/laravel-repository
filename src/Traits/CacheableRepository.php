@@ -161,4 +161,11 @@ trait CacheableRepository
             return parent::first($columns);
         }, $columns);
     }
+
+    public function firstOrFail(array $columns = ['*'])
+    {
+        return $this->cache(__FUNCTION__, function () use ($columns) {
+            return parent::firstOrFail($columns);
+        }, $columns);
+    }
 }
