@@ -353,7 +353,7 @@ abstract class BaseRepository implements RepositoryInterface
     
     protected function preparePerPage($perPage = null)
     {
-        $perPage = $perPage ?: request('per_page', 15);
+        $perPage = (int)$perPage ?: request('per_page', 15);
         $this->perPage = ($perPage > $this->maxPerPage || $perPage < $this->minPerPage) ? $this->perPage : $perPage;
 
         return $this;
